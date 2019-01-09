@@ -1,0 +1,12 @@
+{
+  "name": "food-chain-server",
+  "version": "0.0.0",
+  "description": "FoodChainServer",
+  "main": "app.js",
+  "author": {
+    "name": ""
+  },
+  "devDependencies": {
+    "@types/node": "^8.0.14"
+  }
+}
