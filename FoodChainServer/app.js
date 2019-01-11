@@ -25,10 +25,14 @@ class Receiver {
         //var s = data.toString("utf-8");
         let lastETBIndex = -1;
         let msgs = Array();
+        let localFlag = 0x00;
+        let roomState = 0x00;
         for (let i = 0; i < newBuffer.byteLength; i++) {
             let ch = newBuffer.readUInt8(i);
             if (ch == EndofTransmissionBlock) {
-                let s = newBuffer.toString("utf8", lastETBIndex + 1, i);
+                localFlag = newBuffer.readUInt8(lastETBIndex + 1);
+                roomState = newBuffer.readUInt8(lastETBIndex + 2);
+                let s = newBuffer.toString("utf8", lastETBIndex + 3, i);
                 msgs.push(s);
                 lastETBIndex = i;
             }
@@ -43,6 +47,14 @@ class Receiver {
         ETB.writeUInt8(EndofTransmissionBlock, 0);
         for (let msg of msgs) {
             for (let sender of senders.values()) {
+                if (localFlag != 0x00) {
+                    console.log(localFlag);
+                    sender.write(localFlag);
+                }
+                if (roomState != 0x00) {
+                    console.log(roomState);
+                    sender.write(roomState);
+                }
                 sender.write(msg);
                 sender.write(ETB);
             }
