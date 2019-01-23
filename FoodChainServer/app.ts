@@ -3,121 +3,56 @@ import Socket = net.Socket;
 import { Buffer } from "buffer";
 import { Readable } from "stream";
 const EndofTransmissionBlock = 0x17;
-enum room {
-    lobby,
-    mountain,
-    sky,
-    field,
-    river,
-    ghost
+
+
+enum Animal {
+    Lion,
+    Alligator,
+    Eagle,
+    Hyena,
+    Snake,
+    Chameleon,
+    Deer,
+    Otter,
+    Rabbit,
+    BronzeDuck,
+    Crow,
+    CrocodileBird,
+    Rat
+}
+
+enum Life {
+    Alive,
+    Dead
 };
 
-enum animal {
-    lion,
-    alligator,
-    eagle,
-    hyena,
-    snake,
-    chameleon,
-    deer,
-    otter,
-    rabbit,
-    bronzeDuck,
-    crow,
-    crocodileBird,
-    rat
-}
-
-enum life {
-    alive,
-    dead
-};
-
-
-class lobbyRoom {
-    public readonly name = "lobby";
-    private sendersUid: number[];
-
-
-    public addSendersUid(uid: number) {
-        this.sendersUid.push(uid);
-    }
-    public deleteSendersUid() {
-        this.sendersUid = [];
-    }
+enum MsgType {
+    Chat,
+    Attack,
+    Move,
+    Camouflage,
+    Spy,
+    Predict,
+    AttackSucces,
+    AttackFail
 
 }
 
-class mountainRoom {
-    public readonly name = "mountain";
+class Room {
     private sendersUid: number[];
+    private roomName: string;
 
-    public addSendersUid(uid: number) {
-        this.sendersUid.push(uid);
-    }
-    public deleteAllSendersUid() {
+    public constructor() {
         this.sendersUid = [];
     }
-}
 
-class skyRoom {
-    public readonly name = "sky";
-    private sendersUid: number[];
-
-    public addSendersUid(uid: number) {
-        this.sendersUid.push(uid);
+    public enterTheRoom(suid: number) {
+        this.sendersUid.push(suid);
     }
-    public deleteAllSendersUid() {
-        this.sendersUid = [];
-    }
-    public deleteSenderUid(uid: number) {
-        this.sendersUid.splice(this.sendersUid.indexOf(uid), 1);
-    }
-}
-
-class fieldRoom {
-    public readonly name = "field";
-    private sendersUid: number[];
-
-    public addSendersUid(uid: number) {
-        this.sendersUid.push(uid);
-    }
-    public deleteAllSendersUid() {
-        this.sendersUid = [];
-    }
-    public deleteSenderUid(uid: number) {
-        this.sendersUid.splice(this.sendersUid.indexOf(uid), 1);
-    }
-}
-
-class riverRoom {
-
-    public readonly name = "river";
-    private sendersUid: number[];
-
-    public addSendersUid(uid: number) {
-        this.sendersUid.push(uid);
-    }
-    public deleteAllSendersUid() {
-        this.sendersUid = [];
-    }
-    public deleteSenderUid(uid: number) {
-        this.sendersUid.splice(this.sendersUid.indexOf(uid), 1);
-    }
-}
-
-class ghostRoom {
-    public readonly name = "ghost";
-    private sendersUid: number[];
-
-    public addSendersUid(uid: number) {
-        this.sendersUid.push(uid);
-    }
-    public deleteAllSendersUid() {
-        this.sendersUid = [];
-    }
-    public deleteSenderUid(uid: number) {
-        this.sendersUid.splice(this.sendersUid.indexOf(uid), 1);
+    public broadcastInRoom(msg: Message) {
+        for (let s of this.sendersUid) {
+            msg.WriteToSocket(senders.get(s));
+        }
     }
 }
 
@@ -132,31 +67,40 @@ abstract class Message {
     protected static readonly attackSucces = 1621;
     protected static readonly attackFail = 1622;
 
-    private static room;
-    public constructor(room: number) {
-        this.room = room;
-    }
-    public static Parse(line: Buffer, from: Receiver): Message {
+    protected msgType: MsgType;
 
+    public getMsgType() {
+        return this.msgType;
+    }
+   
+    public static Parse(line: Buffer, from: Receiver): Message {
+        if (line.length == 0)
+            return;
         var flag = line.readUInt8(0); // 가져온 메세지 한 문장 버퍼에서 첫번째 flag 바이트 해석
-        let roomNumber = line.readUInt8(1);
     
         switch (flag) {
             case this.chat:
-                return new ChatMessage(roomNumber,line.slice(2));
-        
-            case this.attack:
-                let toAnimal = line.readUInt8(1);
-                let to;
-                for (let i = 0; receivers.size; i++) {
-                    if (receivers[i].role == toAnimal) {
-                        to = receivers[i];
-                    }
-                }
-                if(to != null)
-                    return new attackMessage(roomNumber,from,to);
+                return new ChatMessage(line.slice(1));
 
+            case this.attack:
+                {
+                    let roomNumber = 1;
+                    let toAnimal = line.readUInt8(1);
+                    let to;
+                    for (let i = 0; receivers.size; i++) {
+                        if (receivers[i].role == toAnimal) {
+                            to = receivers[i];
+                        }
+                    }
+                    if (to != null)
+                        return new attackMessage(roomNumber, from, to);
+                }
             case this.move:
+                {
+                    let toGoPlace = line.readUInt8(1);
+                    let fromRoomState = from.roomState;
+
+                } 
                 break;
             case this.camouflage:
                 break;
@@ -177,8 +121,9 @@ class ChatMessage extends Message {
 
     private msg;
 
-    public constructor(room: number, line: Buffer) {
-        super(room);
+    public constructor(line: Buffer) {
+        super();
+        super.msgType = MsgType.Chat;
         this.msg = line.toString("utf-8");
     }
     public WriteToSocket(socket: Socket) {
@@ -194,12 +139,32 @@ class ChatMessage extends Message {
 
     
 }
+class moveMessage extends Message {
+    private msg;
+
+    public constructor(room: number, line: Buffer) {
+        super();
+        super.msgType = MsgType.Move;
+        this.msg = line.toString("utf-8");
+    }
+
+    public WriteToSocket(socket: Socket) {
+
+        let ETB = new Buffer(1);
+        ETB.writeUInt8(EndofTransmissionBlock, 0);
+        let msgFlag = new Buffer(1);
+        msgFlag.writeUInt8(Message.chat, 0);
+        socket.write(msgFlag)
+        socket.write(this.msg);
+        socket.write(ETB);
+    }
+}
 class attackMessage extends Message {
 
     private msg;
 
     public constructor(room: number, from: Receiver, to: Receiver) {
-        super(room);
+        super();
         if (from.role < 4 && from.role < to.role) {
             //방에있는 사람에게 from이 to를 잡아먹었다고 전송
             //to의 roomState변경
@@ -216,14 +181,14 @@ class attackMessage extends Message {
         let ETB = new Buffer(1);
         let msgFlag = new Buffer(1);
         ETB.writeUInt8(EndofTransmissionBlock, 0);
-        msgFlag.writeUInt8(Message., 0); 
+        
     }
 }
 
 
 function selectRole() {
-    let animalList = [animal.lion, animal.alligator, animal.bronzeDuck, animal.chameleon, animal.crocodileBird, animal.crow, animal.deer, animal.eagle,
-    animal.hyena, animal.otter, animal.rabbit, animal.rat, animal.snake];
+    let animalList = [Animal.Lion, Animal.Alligator, Animal.BronzeDuck, Animal.Chameleon, Animal.CrocodileBird, Animal.Crow, Animal.Deer, Animal.Eagle,
+    Animal.Hyena, Animal.Otter, Animal.Rabbit, Animal.Rat, Animal.Snake];
 
     for (let i = 0; i < 13; i++) {
         let select = Math.floor(Math.random() * animalList.length);
@@ -235,13 +200,14 @@ function selectRole() {
 }
 class Receiver {
     
-    public constructor(socket: Socket) {
+    public constructor(socket: Socket, uid: number) {
         this.socket = socket;
         this.buffer = new Buffer(0);
         this.socket.on("data", (data: Buffer) => this.PollMessage(data));
-        this.roomState = room.lobby;
+        this.roomState = lobbyRoom;
+        lobbyRoom.enterTheRoom(uid);
         this.role = -1;
-        this.state = life.alive;
+        this.state = Life.Alive;
     }
     /**
      * PollMessage
@@ -266,31 +232,38 @@ class Receiver {
                 lastETBIndex = i;
             }
         }
-        if (lastETBIndex != -1) {
-            this.buffer = newBuffer.slice(lastETBIndex);
+        if (lastETBIndex != -1) {//ETB 찾음
+            this.buffer = newBuffer.slice(lastETBIndex+1);
         }
         else {
             this.buffer = newBuffer;
         }
         for (let msg of msgs) {
-            for (let entry of receivers.entries()) {
-                let number = entry["0"];
-                let rv = entry["1"];
-                if (rv.roomState == this.roomState) {
-                    msg.WriteToSocket(senders[number].Socket);
-                }
+            switch (msg.getMsgType()) {
+                case MsgType.Chat: {
+                    this.roomState.broadcastInRoom(msg);
+                    break;
+                }  
+                case MsgType.Move:
+                    break;
+
             }
         }
     }
+
     public buffer: Buffer;
     public socket: Socket;
-    public roomState: room;
-    public role: animal;
-    public state: life;
+    public roomState: Room;
+    public role: Animal;
+    public state: Life;
 }
 let last_index = 0;
 let senders = new Map<number, Socket>();
 let receivers = new Map<number, Receiver>();
+let fieldRoom = new Room();
+let mountainRoom = new Room();
+let lobbyRoom = new Room();
+
 let server = net.createServer((socket) => {
     
     socket.on("data", (data: Buffer) => {
@@ -312,7 +285,7 @@ let server = net.createServer((socket) => {
         }
         if (senders.has(index) && !receivers.has(index)) {
             socket.write(data);
-            let receiver = new Receiver(socket);
+            let receiver = new Receiver(socket,index);
 
             receivers.set(index, receiver);
 
