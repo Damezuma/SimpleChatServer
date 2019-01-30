@@ -1,7 +1,4 @@
-﻿import { Animal } from "./app";
-import { Life } from "./app";
-import { AttackLevel } from "./app";
-import { RoomName } from "./app";
+﻿import { Animal, Life, AttackLevel, RoomName } from "./Variables";
 
 import { Receiver } from "./Receiver";
 

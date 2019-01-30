@@ -4,67 +4,17 @@ import { Buffer } from "buffer";
 
 import { Role } from "./Role";
 import { Receiver } from "./Receiver";
-
 import { Message } from "./Message";
-export const EndofTransmissionBlock = 0x17;
-
-export enum RoomName {
-    Mountain,
-    Field,
-    Sky,
-    River,
-    Lobby
-};
-
-export enum Animal {
-    Lion,
-    Alligator,
-    Eagle,
-    Hyena,
-    Snake,
-    Chameleon,
-    Deer,
-    Otter,
-    Rabbit,
-    BronzeDuck,
-    Crow,
-    CrocodileBird,
-    Rat
-}
-
-export enum Life {
-    Alive,
-    Dead
-};
-
-export enum MsgType {
-    Chat,
-    Attack,
-    Move,
-    Camouflage,
-    Spy,
-    Predict,
-    AttackSucces,
-    AttackFail
-
-}
-
-export enum AttackLevel {
-    Lion,
-    Aligator,
-    Eagle,
-    Hyena,
-    Possible,
-    Impossible,
-    Reflect,
-
-}
+import { ZooHo } from "./ZooHo";
+import { Animal, EndofTransmissionBlock } from "./Variables";
 
 function selectRole() {
     let animalList = [Animal.Lion, Animal.Alligator, Animal.BronzeDuck, Animal.Chameleon, Animal.CrocodileBird, Animal.Crow, Animal.Deer, Animal.Eagle,
     Animal.Hyena, Animal.Otter, Animal.Rabbit, Animal.Rat, Animal.Snake];
 
-    for (let rv of receivers) {
+    let ENV = ZooHo.Instance;
+
+    for (let rv of ENV.Receivers) {
         let select = Math.floor(Math.random() * animalList.length);
         let s = animalList[select];
         animalList = animalList.filter((v, it) => it != select);
@@ -73,7 +23,7 @@ function selectRole() {
         rv["1"].role = new Role(s);
 
         //전송
-        let sk = senders.get(rv["0"]);
+        let sk = ENV.Senders.get(rv["0"]);
 
         let ETB = new Buffer(1);
         ETB.writeUInt8(EndofTransmissionBlock, 0);
@@ -89,12 +39,10 @@ function selectRole() {
 }
 
 let last_index = 0;
-let senders = new Map<number, Socket>();
-let receivers = new Map<number, Receiver>();
-
 
 let server = net.createServer((socket) => {
-    
+
+    let ENV = ZooHo.Instance;
     socket.on("data", (data: Buffer) => {
         socket.removeAllListeners("data");
         let index: number = data.readInt32LE(0);
@@ -103,35 +51,35 @@ let server = net.createServer((socket) => {
             let bu = new Buffer(4);
             bu.writeInt32LE(last_index, 0);
             socket.write(bu);
-            senders.set(last_index, socket);
+            ENV.Senders.set(last_index, socket);
             socket.on("close", () => {
-                senders.delete(index);
+                ENV.Senders.delete(index);
             });
             socket.on("error", () => {
-                senders.delete(index);
+                ENV.Senders.delete(index);
             });
             return;
         }
-        if (senders.has(index) && !receivers.has(index)) {
+        if (ENV.Senders.has(index) && !ENV.Receivers.has(index)) {
             socket.write(data);
             let receiver = new Receiver(socket,index);
 
-            receivers.set(index, receiver);
+            ENV.Receivers.set(index, receiver);
 
          
 
-            if (receivers.size == 13) {
+            if (ENV.Receivers.size == 13) {
                 console.log("13명이 모두 모임");
                 selectRole();
             } else {
-                console.log(receivers.size);
+                console.log(ENV.Receivers.size);
                 
             }
             socket.on("close", () => {
-                receivers.delete(index);
+                ENV.Receivers.delete(index);
             });
             socket.on("error", () => {
-                receivers.delete(index);
+                ENV.Receivers.delete(index);
             });
         }
         else {

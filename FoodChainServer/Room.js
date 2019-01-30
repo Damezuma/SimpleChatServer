@@ -1,6 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const ZooHo_1 = require("./ZooHo");
 class Room {
     constructor(roomName) {
         this.sendersUid = [];
@@ -9,10 +8,12 @@ class Room {
     enterTheRoom(suid) {
         this.sendersUid.push(suid);
     }
-    broadcastInRoom(msg) {
-        let ENV = ZooHo_1.ZooHo.Instance;
+    exitTheRoom(suid) {
+        this.sendersUid.splice(this.sendersUid.indexOf(suid), 1);
+    }
+    broadcastInRoom(msg, senders) {
         for (let s of this.sendersUid) {
-            msg.WriteToSocket(ENV.Senders.get(s));
+            msg.WriteToSocket(senders.get(s));
         }
     }
 }

@@ -1,29 +1,39 @@
 ﻿import net = require("net");
 import Socket = net.Socket;
 
-import { Message } from "./Message";
+import { Message, NameMessage, AllNameMessage } from "./Message";
 import { Room } from "./Room";
 import { Role } from "./Role";
 import { ZooHo } from "./ZooHo";
 
-import { Life, MsgType, EndofTransmissionBlock } from "./app";
+import { Life, MsgType, EndofTransmissionBlock } from "./Variables";
 
 
 export class Receiver {
 
     public constructor(socket: Socket, uid: number) {
 
-        this.ENV = ZooHo.Instance;
+        let ENV = ZooHo.Instance;
 
+        
         this.socket = socket;
         this.buffer = new Buffer(0);
         this.socket.on("data", (data: Buffer) => this.PollMessage(data));
-        this.roomState = this.ENV.LobbyRoom;
+        this.roomState = ENV.LobbyRoom;
         this.uid = uid;
-        this.name = "익명";
-        this.ENV.LobbyRoom.enterTheRoom(uid);
+        this.name = ENV.RandomNames;
+        ENV.LobbyRoom.enterTheRoom(uid);
         this.role = null;
         this.state = Life.Alive;
+
+        ENV.setNameMap(this.name, this.uid);
+
+        let nameMsg = new NameMessage(this.name);
+        nameMsg.WriteToSocket(ENV.Senders.get(uid));
+        
+        let allNameMsg = new AllNameMessage();
+        allNameMsg.WriteToSocket(ENV.Senders.get(uid));
+
     }
     /**
      * PollMessage
@@ -57,7 +67,7 @@ export class Receiver {
         for (let msg of msgs) {
             switch (msg.getMsgType()) {
                 case MsgType.Chat: {
-                    this.roomState.broadcastInRoom(msg);
+                    this.roomState.broadcastInRoom(msg, this.ENV.Senders);
                     break;
                 }
                 case MsgType.Move:
@@ -74,6 +84,6 @@ export class Receiver {
     public role: Role;
     public state: Life;
     public uid: number;
-    public name: String;
+    public name: string;
     private ENV: ZooHo;
 }

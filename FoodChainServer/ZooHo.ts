@@ -2,7 +2,7 @@
 import Socket = net.Socket;
 import { Room } from "./Room";
 import { Receiver } from "./Receiver";
-import { RoomName } from "./app"
+import { RoomName, RandomNames } from "./Variables"
 
 export class ZooHo {
     private static instance: ZooHo = new ZooHo();
@@ -13,19 +13,27 @@ export class ZooHo {
     private lobbyRoom: Room;
     private senders;
     private receivers;
-
+    private randomNames: string[];
+    private names: Map<string, number>;
 
     public static get Instance() {
         return ZooHo.instance;
     };
 
+    public setNameMap(name: string, uid: number) {
+        this.names.set(name, uid);
+    };
+
     private constructor() {
         this.mountainRoom = new Room(RoomName.Mountain);
         this.skyRoom = new Room(RoomName.Sky);
+        this.fieldRoom = new Room(RoomName.Field);
         this.riverRoom = new Room(RoomName.River);
         this.lobbyRoom = new Room(RoomName.Lobby);
         this.senders = new Map<number, Socket>();
         this.receivers = new Map<number, Receiver>();
+        this.randomNames = RandomNames;
+        this.names = new Map<string, number>();
     }
 
     public get FieldRoom() {
@@ -54,5 +62,19 @@ export class ZooHo {
 
     public get Receivers() {
         return this.receivers;
+    }
+
+    public get RandomNames() {
+
+        let select = Math.floor(Math.random() * this.randomNames.length);
+        let s = this.randomNames[select];
+        this.randomNames = this.randomNames.filter((v, it) => it != select);
+
+        return s;
+
+        
+    }
+    public get Names(): Map<string, number> {
+        return this.names;
     }
 }

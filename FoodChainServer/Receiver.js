@@ -2,19 +2,24 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const Message_1 = require("./Message");
 const ZooHo_1 = require("./ZooHo");
-const app_1 = require("./app");
+const Variables_1 = require("./Variables");
 class Receiver {
     constructor(socket, uid) {
-        this.ENV = ZooHo_1.ZooHo.Instance;
+        let ENV = ZooHo_1.ZooHo.Instance;
         this.socket = socket;
         this.buffer = new Buffer(0);
         this.socket.on("data", (data) => this.PollMessage(data));
-        this.roomState = this.ENV.LobbyRoom;
+        this.roomState = ENV.LobbyRoom;
         this.uid = uid;
-        this.name = "익명";
-        this.ENV.LobbyRoom.enterTheRoom(uid);
+        this.name = ENV.RandomNames;
+        ENV.LobbyRoom.enterTheRoom(uid);
         this.role = null;
-        this.state = app_1.Life.Alive;
+        this.state = Variables_1.Life.Alive;
+        ENV.setNameMap(this.name, this.uid);
+        let nameMsg = new Message_1.NameMessage(this.name);
+        nameMsg.WriteToSocket(ENV.Senders.get(uid));
+        let allNameMsg = new Message_1.AllNameMessage();
+        allNameMsg.WriteToSocket(ENV.Senders.get(uid));
     }
     /**
      * PollMessage
@@ -34,7 +39,7 @@ class Receiver {
         let msgs = Array();
         for (let i = 0; i < newBuffer.byteLength; i++) {
             let ch = newBuffer.readUInt8(i);
-            if (ch == app_1.EndofTransmissionBlock) {
+            if (ch == Variables_1.EndofTransmissionBlock) {
                 msgs.push(Message_1.Message.Parse(newBuffer.slice(lastETBIndex + 1, i), this));
                 lastETBIndex = i;
             }
@@ -47,11 +52,11 @@ class Receiver {
         }
         for (let msg of msgs) {
             switch (msg.getMsgType()) {
-                case app_1.MsgType.Chat: {
-                    this.roomState.broadcastInRoom(msg);
+                case Variables_1.MsgType.Chat: {
+                    this.roomState.broadcastInRoom(msg, this.ENV.Senders);
                     break;
                 }
-                case app_1.MsgType.Move:
+                case Variables_1.MsgType.Move:
                     msg.WriteToSocket(this.ENV.Senders.get(this.uid));
                     break;
             }
